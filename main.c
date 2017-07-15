@@ -70,6 +70,42 @@ int main(int argc, char **argv) {
             printf("MPI_Slave: FIN %d, %s. Add until %lu\n", myID, myProcessorName, addUntil);
         }
         MPI_Finalize();
+    } else if (strcmp(argv[1], "Matrix") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "Strassen") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "Quicksort") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "Mergesort") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "TSP") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "DFS") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "Search") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "PI") == 0) {
+
+        MPI_Finalize();
+    } else if (strcmp(argv[1], "Test") == 0) {
+        int processCount;
+        MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+        MPI_Request requests[processCount - 1];
+        int myID;
+        MPI_Comm_rank(MPI_COMM_WORLD, &myID);
+        char myProcessorName[MPI_MAX_PROCESSOR_NAME];
+        int processorNameLen;
+        MPI_Get_processor_name(myProcessorName, &processorNameLen);
+        printf("Hi! My ID is %d and my processor name is %s. I'm out of %d processes in total.\n", myID,
+               myProcessorName, processCount);
+        MPI_Finalize();
     } else {
         printf("No such program as \" %s \".\n", argv[1]);
         MPI_Finalize();
