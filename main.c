@@ -3,6 +3,8 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <memory.h>
 
 static long get_nanos(void) {
     struct timespec ts;
@@ -16,7 +18,7 @@ int main(int argc, char **argv) {
 
     /* determine which program to run */
 
-    if (argc != 2) {
+    if (argc <= 2) {
         printf("Err: malformed arguments\n");
         MPI_Finalize();
         return EXIT_FAILURE;
@@ -71,6 +73,91 @@ int main(int argc, char **argv) {
         }
         MPI_Finalize();
     } else if (strcmp(argv[1], "Matrix") == 0) {
+        /* program_1 Matrix_2 <size>_3 -G_4 <-1|m>_5 */
+        if (argc != 5 || strcmp(argv[3], "-G") != 0) {
+            printf("Matrix: Error: Number of arguments. ./program Matrix <size> -G [-1|<m>] (-1=default)");
+            MPI_Finalize();
+            return EXIT_FAILURE;
+        }
+        long tStart, tEnd, tDiff;
+
+        int size = atoi(argv[3]), G = atoi(argv[4]);
+        tStart = get_nanos();
+        int processCount;
+        MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+        MPI_Request requests[processCount - 1];
+        int myID;
+        MPI_Comm_rank(MPI_COMM_WORLD, &myID);
+        char myProcessorName[MPI_MAX_PROCESSOR_NAME];
+        int processorNameLen;
+        MPI_Get_processor_name(myProcessorName, &processorNameLen);
+
+        int eachSize = size / processCount;
+        if (myID == 0) {
+
+            int **A = malloc(sizeof(unsigned long *) * size);
+            int **B = malloc(sizeof(unsigned long *) * size);
+            int **C = malloc(sizeof(unsigned long *) * size);
+            {
+                int i;
+                for (i = 0; i < size; i++) {
+                    A[i] = malloc(sizeof(unsigned long) * size);
+                    B[i] = malloc(sizeof(unsigned long) * size);
+                    int j;
+                    for (j = 0; j < size; j++) {
+                        A[i][j] = rand();
+                        B[i][j] = rand();
+                    }
+                    C[i] = malloc(sizeof(unsigned long) * size); /* don't know C yet!  */
+                }
+            }
+
+            int eachSizes[processCount];
+            int displacement[processCount];
+            if (G == -1) {
+                /* default, use each size */
+                int i;
+                for (i = 0; i < processCount; i++) {
+                    if (i == processCount - 1) {
+                        eachSizes[i] = size - eachSize * i;
+                    } else
+                        eachSizes[i] = eachSize;
+                }
+            } else {
+                int fairProcs = size / G;
+                int i;
+                if (fairProcs >= processCount) {
+                    /* if G is really small and distributes to a lot of processes, let n-1 nodes be fair
+                     * and make the last node handle the rest. */
+                    for (i = 0; i < processCount; i++) {
+                        if (i == processCount - 1) {
+                            eachSizes[i] = size - G * i;
+                        } else
+                            eachSizes[i] = G;
+                    }
+                } else {
+                    /* if G is really big and only distributes to a small amount of processes, allocate to fairProcs-1
+                     * and distribute the tasks fairly to the rest of the nodes. */
+                    for (i = 0; i < fairProcs - 2; i++) {
+                        eachSizes[i] = G;
+                    }
+                    int restSize = (processCount - fairProcs + 2) / (size - ((fairProcs - 2) * G));
+                    for (++i; i < processCount; i++) {
+                        if (i == processCount - 1) {
+                            eachSizes[i] = size - (restSize * (processCount - fairProcs + 1)) - (G * (fairProcs - 2));
+                        } else
+                            eachSizes[i] = restSize;
+                    }
+
+                }
+            }
+
+            /* Scatter out! */
+            MPI_Scatterv(&(A[0][0]), eachSizes, #, MPI_INT, eachSizes[myID], MPI_INT, MPI_COMM_WORLD);
+
+        } else {
+
+        }
 
         MPI_Finalize();
     } else if (strcmp(argv[1], "Strassen") == 0) {
