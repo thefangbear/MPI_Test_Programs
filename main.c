@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 
     /* determine which program to run */
 
-    if (argc <= 2) {
+    if (argc < 2) {
         printf("Err: malformed arguments\n");
         MPI_Finalize();
         return EXIT_FAILURE;
@@ -229,6 +229,7 @@ int main(int argc, char **argv) {
                myProcessorName, processCount);
         MPI_Finalize();
     } else if (strcmp(argv[1], "TestConcept") == 0) {
+        printf("TestConcept\n");
         /* Init */
         int processCount;
         MPI_Comm_size(MPI_COMM_WORLD, &processCount);
