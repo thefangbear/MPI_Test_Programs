@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2017- Rui-Jie Fang <rfang@temple.edu>.
+ * Cite-as: Rui-Jie Fang. MPI Test Programs. GitHub.com.
+ * Https://github.com/thefangbear/MPI_Test_Programs. 2017.
+ */
 #include <mpi.h>
 #include <stdio.h>
 #include <time.h>
@@ -6,6 +11,10 @@
 #include <unistd.h>
 #include <memory.h>
 
+/*
+ * Timing is only available on non-Mac machines
+ * (OSX does not have C11 timing functions we need)
+ */
 #ifndef __MACH__
 static long get_nanos(void) {
     struct timespec ts;
@@ -286,12 +295,12 @@ int main(int argc, char **argv) {
             if (processCount > 1)
                 for (i = 1; i < processCount; i++) {
                     if (i != processCount - 1) {
-                        eachSizes[i] = avgSize;
-                        displacement[i] = displacement[i - 1] + avgSize;
+                        eachSizes[i] = avgSize * 100;
+                        displacement[i] = displacement[i - 1] + avgSize * 100;
                     } else {
                         int remaining = 100 - avgSize * i;
-                        eachSizes[i] = remaining;
-                        displacement[i] = displacement[i - 1] + avgSize;
+                        eachSizes[i] = remaining * 100;
+                        displacement[i] = displacement[i - 1] + avgSize * 100;
                     }
                     printf("Task size for %d/%d: %d. Displ: %d\n", i, processCount, eachSizes[i], displacement[i]);
                 }
@@ -308,10 +317,10 @@ int main(int argc, char **argv) {
         printf("%d: Scatter&bcast.\n", myID);
         /* Scatter & bcast */
         if (myID == 0)
-            MPI_Scatterv(&M, eachSizes, displacement, MPI_INT, NULL, eachSizes[myID], MPI_INT, 0,
+            MPI_Scatterv(&(M[0][0]), eachSizes, displacement, MPI_INT, NULL, eachSizes[myID], MPI_INT, 0,
                          MPI_COMM_WORLD);
         else
-            MPI_Scatterv(NULL, NULL, NULL, MPI_INT, &M, eachSizes[myID] * 100, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Scatterv(NULL, NULL, NULL, MPI_INT, &(M[0][0]), eachSizes[myID] , MPI_INT, 0, MPI_COMM_WORLD);
         printf("%d: Bcast.\n", myID);
         MPI_Bcast(&(N[0][0]), 100 * 100, MPI_INT, 0, MPI_COMM_WORLD);
         printf("Hi! My ID is %d and my processor name is %s. I'm out of %d processes in total.\n", myID,
