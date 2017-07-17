@@ -290,7 +290,7 @@ int main(int argc, char **argv) {
         /* Partition */
         {
             int i;
-            eachSizes[0] = avgSize;
+            eachSizes[0] = avgSize * 100;
             displacement[0] = 0;
             if (processCount > 1)
                 for (i = 1; i < processCount; i++) {
