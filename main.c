@@ -311,7 +311,7 @@ int main(int argc, char **argv) {
             MPI_Scatterv(&M, eachSizes, displacement, MPI_INT, NULL, eachSizes[myID], MPI_INT, 0,
                          MPI_COMM_WORLD);
         else
-            MPI_Scatterv(NULL, NULL, NULL, MPI_INT, &M, eachSizes[myID], MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Scatterv(NULL, NULL, NULL, MPI_INT, &M, eachSizes[myID] * 100, MPI_INT, 0, MPI_COMM_WORLD);
         printf("%d: Bcast.\n", myID);
         MPI_Bcast(&(N[0][0]), 100 * 100, MPI_INT, 0, MPI_COMM_WORLD);
         printf("Hi! My ID is %d and my processor name is %s. I'm out of %d processes in total.\n", myID,
