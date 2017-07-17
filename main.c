@@ -263,10 +263,12 @@ int main(int argc, char **argv) {
                 for (i = 0; i < 100; i++) {
                     if (myID == 0)
                         M[i] = malloc(sizeof(int) * 100);
+
                     N[i] = malloc(sizeof(int) * 100);
                     int j;
                     for (j = 0; j < 100; j++) {
-                        M[i][j] = rand();
+                        if (myID == 0)
+                            M[i][j] = rand();
                         N[i][j] = rand();
                     }
                 }
