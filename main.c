@@ -298,11 +298,13 @@ int main(int argc, char **argv) {
             for (i = 0; i < eachSizes[myID]; i++)
                 M = malloc(sizeof(int) * 100);
         }
+        int xx1 = M[0][0];
+        int xx2 = N[0][0];
         MPI_Barrier(MPI_COMM_WORLD);
         printf("%d: Scatter&bcast.\n", myID);
         /* Scatter & bcast */
-        MPI_Scatterv(M, eachSizes, displacement, MPI_INT, M, eachSizes[myID], MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(N, 100 * 100, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Scatterv(&(M[0][0]), eachSizes, displacement, MPI_INT, M, eachSizes[myID], MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(N[0][0]), 100 * 100, MPI_INT, 0, MPI_COMM_WORLD);
         printf("Hi! My ID is %d and my processor name is %s. I'm out of %d processes in total.\n", myID,
                myProcessorName, processCount);
     } else {
