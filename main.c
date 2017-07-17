@@ -281,8 +281,8 @@ int main(int argc, char **argv) {
             int i;
             eachSizes[0] = avgSize;
             displacement[0] = 0;
-            for (i = 1; i < 100; i++) {
-                if (i != 99) {
+            for (i = 1; i < processCount; i++) {
+                if (i != processCount - 1) {
                     eachSizes[i] = avgSize;
                     displacement[i] = displacement[i - 1] + avgSize;
                 } else {
