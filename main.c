@@ -295,6 +295,7 @@ int main(int argc, char **argv) {
                 }
         }
         if (myID != 0) {
+            printf("Allocate M at %d", myID);
             M = malloc(sizeof(int *) * eachSizes[myID]);
             int i;
             for (i = 0; i < eachSizes[myID]; i++)
