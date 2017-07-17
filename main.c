@@ -281,16 +281,18 @@ int main(int argc, char **argv) {
             int i;
             eachSizes[0] = avgSize;
             displacement[0] = 0;
-            for (i = 1; i < processCount; i++) {
-                if (i != processCount - 1) {
-                    eachSizes[i] = avgSize;
-                    displacement[i] = displacement[i - 1] + avgSize;
-                } else {
-                    int remaining = 100 - avgSize * i;
-                    eachSizes[i] = remaining;
-                    displacement[i] = displacement[i - 1] + avgSize;
+            if (processCount > 1)
+                for (i = 1; i < processCount; i++) {
+                    if (i != processCount - 1) {
+                        eachSizes[i] = avgSize;
+                        displacement[i] = displacement[i - 1] + avgSize;
+                    } else {
+                        int remaining = 100 - avgSize * i;
+                        eachSizes[i] = remaining;
+                        displacement[i] = displacement[i - 1] + avgSize;
+                    }
+                    printf("Task size for %d/%d: %d. Displ: %d\n", i, processCount, eachSizes[i], displacement[i]);
                 }
-            }
         }
         if (myID != 0) {
             M = malloc(sizeof(int *) * eachSizes[myID]);
@@ -298,8 +300,10 @@ int main(int argc, char **argv) {
             for (i = 0; i < eachSizes[myID]; i++)
                 M = malloc(sizeof(int) * 100);
         }
+        printf("After partition.\n");
         int xx1 = M[0][0];
         int xx2 = N[0][0];
+        printf("Barrier\n");
         MPI_Barrier(MPI_COMM_WORLD);
         printf("%d: Scatter&bcast.\n", myID);
         /* Scatter & bcast */
