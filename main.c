@@ -300,9 +300,6 @@ int main(int argc, char **argv) {
             for (i = 0; i < eachSizes[myID]; i++)
                 M = malloc(sizeof(int) * 100);
         }
-        printf("After partition.\n");
-        int xx1 = M[0][0];
-        int xx2 = N[0][0];
         printf("Barrier\n");
         MPI_Barrier(MPI_COMM_WORLD);
         printf("%d: Scatter&bcast.\n", myID);
