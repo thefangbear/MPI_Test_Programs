@@ -6,11 +6,13 @@
 #include <unistd.h>
 #include <memory.h>
 
+#ifndef __MACH__
 static long get_nanos(void) {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
     return (long) ts.tv_sec * 1000000000L + ts.tv_nsec;
 }
+#endif
 
 int main(int argc, char **argv) {
 
@@ -26,9 +28,11 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "Addition") == 0) {
 
-
         long tStart, tEnd, tDiff;
+#ifndef __MACH__
+
         tStart = get_nanos();
+#endif
         int processCount;
         MPI_Comm_size(MPI_COMM_WORLD, &processCount);
         MPI_Request requests[processCount - 1];
@@ -53,9 +57,11 @@ int main(int argc, char **argv) {
                 printf("Waiting %d\n", i);
                 MPI_Wait(&requests[i], NULL);
             }
+#ifndef __MACH__
             tEnd = get_nanos();
             tDiff = tEnd - tStart;
             printf("Master: Total time: %ld ns\n", tDiff);
+#endif
             /* verify */
             for (i = 1; i < processCount; i++) {
                 if (results[i] != addUntil) {
@@ -82,7 +88,9 @@ int main(int argc, char **argv) {
         long tStart, tEnd, tDiff;
 
         int size = atoi(argv[3]), G = atoi(argv[4]);
+#ifndef __MACH__
         tStart = get_nanos();
+#endif
         int processCount;
         MPI_Comm_size(MPI_COMM_WORLD, &processCount);
         MPI_Request requests[processCount - 1];
