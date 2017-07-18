@@ -195,6 +195,11 @@ int main(int argc, char **argv) {
                 M[i] = rand();
                 N[i] = rand();
             }
+        } else {
+            int i;
+            for (i = 0; i < SIZE * SIZE; i++) {
+                N[i] = rand();
+            }
         }
         M_Recv = malloc(sizeof(int) * sizes[myID]);
         O_Parts = malloc(sizeof(int) * (sizes[myID] + 1));
@@ -203,8 +208,8 @@ int main(int argc, char **argv) {
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Scatterv((myID == 0) ? (&(M[0])) : NULL, sizes, displ, MPI_INT, &(M_Recv[0]), sizes[myID], MPI_INT, 0,
                      MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(&(N[0]), SIZE * SIZE, MPI_INT, 0, MPI_COMM_WORLD);
+     //   MPI_Barrier(MPI_COMM_WORLD);
+    //    MPI_Bcast(&(N[0]), SIZE * SIZE, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
         /* Do work! */
         {
