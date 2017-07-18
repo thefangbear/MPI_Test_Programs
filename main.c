@@ -99,10 +99,26 @@ int main(int argc, char **argv) {
         int displ[processCount];
         int displ_rows[processCount];
         int G = -1;
-        // ./program TestConcept [G] []
         if (argc == 4 && strcmp(argv[2], "-G") == 0) {
             G = (int) strtol(argv[3], NULL, 10);
             printf("-G: %d\n", G);
+        } else if (argc == 4 && strcmp(argv[2], "--size") == 0) {
+            SIZE = (int) strtol(argv[3], NULL, 10);
+            printf("--size: %d\n", SIZE);
+        } else if (argc == 6
+                   && strcmp(argv[2], "-G") == 0
+                   && strcmp(argv[4], "--size") == 0) {
+            G = (int) strtol(argv[3], NULL, 10);
+            SIZE = (int) strtol(argv[5], NULL, 10);
+            printf("-G: %d\n", G);
+            printf("--size: %d\n", SIZE);
+        } else if (argc == 6
+                   && strcmp(argv[2], "--size") == 0
+                   && strcmp(argv[4], "-G") == 0) {
+            G = (int) strtol(argv[5], NULL, 10);
+            SIZE = (int) strtol(argv[3], NULL, 10);
+            printf("-G: %d\n", G);
+            printf("--size: %d\n", SIZE);
         }
         int *M = NULL, *N, *M_Recv, *O_Parts, *O = NULL;
         {
