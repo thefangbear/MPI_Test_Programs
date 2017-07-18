@@ -262,22 +262,28 @@ int main(int argc, char **argv) {
         printf("Partition\n");
         int SIZE = 100;
         int sizes[processCount];
+        int rows[processCount];
         int displ[processCount];
-        int *M, *N;
+        int displ_rows[processCount];
+        int *M = NULL, *N, *M_Recv, *O_Parts, *O;
         {
             /* Partition */
             int avg = SIZE / processCount;
             int i;
-            sizes[0] = avg;
+            sizes[0] = avg * SIZE;
+            rows[0] = avg;
             displ[0] = 0;
+            displ_rows[0] = 0;
             if (processCount > 1)
                 for (i = 1; i < processCount; i++) {
                     if (i != processCount - 1) {
                         sizes[i] = avg * SIZE;
+                        rows[i] = avg;
                         displ[i] = displ[i - 1] + avg * SIZE;
                     } else {
                         int remainingRows = SIZE - i * avg;
                         sizes[i] = remainingRows * SIZE;
+                        rows[i] = avg;
                         displ[i] = displ[i - 1] + avg * SIZE;
                     }
                 }
@@ -287,28 +293,38 @@ int main(int argc, char **argv) {
         N = malloc(sizeof(int) * SIZE * SIZE);
         if (myID == 0) {
             M = malloc(sizeof(int) * SIZE * SIZE);
+            O = malloc(sizeof(int) * SIZE * SIZE);
             int i;
             for (i = 0; i < SIZE * SIZE; i++) {
                 M[i] = rand();
-                printf("M[%d]: %d\n",i,M[i]);
+                N[i] = rand();
             }
-        } else
-            M = malloc(sizeof(int) * sizes[myID]);
+        }
+        M_Recv = malloc(sizeof(int) * sizes[myID]);
+        O_Parts = malloc(sizeof(int) * sizes[myID]);
         printf("%d: Size: %d, Displacement: %d.\n", myID, sizes[myID], displ[myID]);
         printf("Send\n");
         /* Distribute */
-        MPI_Scatterv(&(M[0]), sizes, displ, MPI_INT, &(M[0]), sizes[myID], MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Scatterv((myID == 0) ? (&(M[0])) : NULL, sizes, displ, MPI_INT, &(M_Recv[0]), sizes[myID], MPI_INT, 0,
+                     MPI_COMM_WORLD);
         MPI_Bcast(&(N[0]), SIZE * SIZE, MPI_INT, 0, MPI_COMM_WORLD);
-        if(myID != 0){
-            int i;
-            for(i = 0; i < sizes[myID];i++)
-                printf("M[%d]:%d\n",i,M[i]);
+        /* Do work! */
+        {
+            int i, k, j;
+            for (i = 0; i < sizes[myID] / SIZE; i++) /* m */
+                for (k = 0; k < sizes[myID] / SIZE; k++) /* n */
+                    for (j = 0; j < SIZE; j++) /* p , m*n n*p */
+                        O_Parts[i * SIZE + j] += M_Recv[i * SIZE + k] * N[k * SIZE + j];
         }
+
+        MPI_Gatherv(O_Parts, sizes[myID] / SIZE, MPI_INT, O,)
         /* Finalize */
         printf("Hi! My ID is %d and my processor name is %s. I'm out of %d processes in total.\n", myID,
                myProcessorName, processCount);
         free(M);
         free(N);
+        free(M_Recv);
         MPI_Finalize();
     } else {
         printf("No such program as \" %s \".\n", argv[1]);
