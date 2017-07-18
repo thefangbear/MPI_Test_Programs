@@ -315,7 +315,8 @@ int main(int argc, char **argv) {
             for (i = 0; i < sizes[myID] / SIZE; i++) /* m */
                 for (k = 0; k < SIZE; k++) /* n */
                     for (j = 0; j < SIZE; j++) /* p , m*n n*p */
-                        O_Parts[i * SIZE + j] += M_Recv[i * SIZE + k] * N[k * SIZE + j];
+                        O_Parts[l++] += M_Recv[i*SIZE + k] * N[k * SIZE + j];
+          /*              O_Parts[i * SIZE + j] += M_Recv[i * SIZE + k] * N[k * SIZE + j]; */
         }
 
         MPI_Gatherv(&(O_Parts[0]), sizes[myID], MPI_INT, &(O[0]), sizes, displ, MPI_INT, 0, MPI_COMM_WORLD);
