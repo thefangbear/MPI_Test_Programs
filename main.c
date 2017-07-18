@@ -82,8 +82,8 @@ int main(int argc, char **argv) {
         MPI_Finalize();
     } else if (strcmp(argv[1], "Matrix") == 0) {
         /* Init */
-        double tInitStart, tInitEnd, tCompStart, tCompEnd, tInitDiff, tCompDiff;
-        tInitStart = MPI_Wtime();
+        double ttStart, ttEnd, ttDiff, tInitStart, tInitEnd, tCompStart, tCompEnd, tAllocStart, tAllocEnd, tAllocDiff, tInitDiff, tCompDiff;
+        ttStart = MPI_Wtime();
         int processCount;
         MPI_Comm_size(MPI_COMM_WORLD, &processCount);
         MPI_Request requests[processCount - 1];
@@ -92,6 +92,7 @@ int main(int argc, char **argv) {
         char myProcessorName[MPI_MAX_PROCESSOR_NAME];
         int processorNameLen;
         MPI_Get_processor_name(myProcessorName, &processorNameLen);
+        ttEnd = MPI_Wtime();
         /* Do work */
         int SIZE = 100;
         int sizes[processCount];
@@ -120,6 +121,7 @@ int main(int argc, char **argv) {
             printf("-G: %d\n", G);
             printf("--size: %d\n", SIZE);
         }
+        tInitStart = MPI_Wtime();
         int *M = NULL, *N, *M_Recv, *O_Parts, *O = NULL;
         {
             /* Partition */
@@ -186,28 +188,40 @@ int main(int argc, char **argv) {
             }
         }
         tInitEnd = MPI_Wtime();
-        tCompStart = MPI_Wtime();
+        tAllocStart = MPI_Wtime();
         /* Allocate: we store arrays in row-major order for the ease of scattering */
         N = malloc(sizeof(int) * SIZE * SIZE);
         if (myID == 0) {
             M = malloc(sizeof(int) * SIZE * SIZE);
             O = malloc(sizeof(int) * SIZE * SIZE);
+            int i, j;
+            for (i = 0; i < SIZE; i++) {
+                for (j = 0; j < SIZE; j++) {
+                    M[i * SIZE + j] = i * j;
+                    N[i * SIZE + j] = i * j;
+                }
+            }
+        } else {
             int i;
-            for (i = 0; i < SIZE * SIZE; i++) {
-                M[i] = rand();
-                N[i] = rand();
+            int j;
+            for (i = 0; i < SIZE; i++) {
+                for (j = 0; j < SIZE; j++)
+                    N[i * SIZE + j] = i * j;
             }
         }
         M_Recv = malloc(sizeof(int) * sizes[myID]);
         O_Parts = malloc(sizeof(int) * (sizes[myID] + 1));
         printf("%d: Size: %d, Displacement: %d.\n", myID, sizes[myID], displ[myID]);
+        tAllocEnd = MPI_Wtime();
         /* Distribute */
         MPI_Barrier(MPI_COMM_WORLD);
+        tCompStart = MPI_Wtime();
+
         MPI_Scatterv((myID == 0) ? (&(M[0])) : NULL, sizes, displ, MPI_INT, &(M_Recv[0]), sizes[myID], MPI_INT, 0,
                      MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(&(N[0]), SIZE * SIZE, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
+        //   MPI_Bcast(&(N[0]), SIZE * SIZE, MPI_INT, 0, MPI_COMM_WORLD);
+        //   MPI_Barrier(MPI_COMM_WORLD);
         /* Do work! */
         {
             int i, k, j, l = 0;
@@ -224,10 +238,13 @@ int main(int argc, char **argv) {
         MPI_Gatherv(&(O_Parts[0]), sizes[myID], MPI_INT, &(O[0]), sizes, displ, MPI_INT, 0, MPI_COMM_WORLD);
         /* Finalize */
         tCompEnd = MPI_Wtime();
+        ttDiff = ttEnd - ttStart;
         tInitDiff = tInitEnd - tInitStart;
+        tAllocDiff = tAllocEnd - tAllocStart;
         tCompDiff = tCompEnd - tCompStart;
         if (myID == 0) {
-            printf("Master: Init cost: %f sec. Comp cost: %f sec. Total cost: %f sec.\n", tInitDiff, tCompDiff, tInitDiff + tCompDiff);
+            printf("Master: T Cost: %f sec. Init cost: %f sec. Alloc Cost: %f sec. Comp cost: %f sec. Total cost: %f sec.\n",
+                   ttDiff, tInitDiff, tAllocDiff, tCompDiff, ttDiff + tInitDiff + tAllocDiff + tCompDiff);
             free(M);
         }
 
