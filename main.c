@@ -313,7 +313,7 @@ int main(int argc, char **argv) {
         {
             int i, k, j;
             for (i = 0; i < sizes[myID] / SIZE; i++) /* m */
-                for (k = 0; k < sizes[myID] / SIZE; k++) /* n */
+                for (k = 0; k < SIZE / SIZE; k++) /* n */
                     for (j = 0; j < SIZE; j++) /* p , m*n n*p */
                         O_Parts[i * SIZE + j] += M_Recv[i * SIZE + k] * N[k * SIZE + j];
         }
