@@ -57,28 +57,76 @@ int main(int argc, char **argv) {
         int rows[processCount];
         int displ[processCount];
         int displ_rows[processCount];
+        int G = -1;
+        // ./program TestConcept [G] []
+        if (argc == 4 && strcmp(argv[2], "-G") == 0) {
+            G = (int) strtol(argv[3], NULL, 10);
+            printf("-G: %d\n", G);
+        }
         int *M = NULL, *N, *M_Recv, *O_Parts, *O = NULL;
         {
             /* Partition */
-            int avg = SIZE / processCount;
-            int i;
-            sizes[0] = avg * SIZE;
-            rows[0] = avg;
-            displ[0] = 0;
-            displ_rows[0] = 0;
-            if (processCount > 1)
-                for (i = 1; i < processCount; i++) {
-                    if (i != processCount - 1) {
-                        sizes[i] = avg * SIZE;
-                        rows[i] = avg;
-                        displ[i] = displ[i - 1] + avg * SIZE;
-                    } else {
-                        int remainingRows = SIZE - i * avg;
-                        sizes[i] = remainingRows * SIZE;
-                        rows[i] = avg;
-                        displ[i] = displ[i - 1] + avg * SIZE;
+            if (G == -1) {
+                int avg = SIZE / processCount;
+                int i;
+                sizes[0] = avg * SIZE;
+                rows[0] = avg;
+                displ[0] = 0;
+                displ_rows[0] = 0;
+                if (processCount > 1)
+                    for (i = 1; i < processCount; i++) {
+                        if (i != processCount - 1) {
+                            sizes[i] = avg * SIZE;
+                            rows[i] = avg;
+                            displ[i] = displ[i - 1] + avg * SIZE;
+                        } else {
+                            int remainingRows = SIZE - i * avg;
+                            sizes[i] = remainingRows * SIZE;
+                            rows[i] = avg;
+                            displ[i] = displ[i - 1] + avg * SIZE;
+                        }
+                    }
+            } else {
+                int numHosts = SIZE / G;
+                if (numHosts >= processCount) {
+                    int i;
+                    sizes[0] = G * SIZE;
+                    displ[0] = 0;
+                    if (processCount > 1)
+                        for (i = 1; i < processCount; i++) {
+                            if (i != processCount - 1) {
+                                sizes[i] = G * SIZE;
+                                displ[i] = displ[i - 1] + G * SIZE;
+                            } else {
+                                int remaining = SIZE - i * G;
+                                sizes[i] = remaining * SIZE;
+                                displ[i] = displ[i - 1] + G * SIZE;
+                            }
+                        }
+
+                } else {
+                    /* G is big and ... */
+                    /* Distribute one row to each host first to guarantee fairness */
+                    int i;
+                    for (i = 0; i < processCount; i++)
+                        sizes[i] = 1;
+                    /* Then distribute G */
+                    int newSize = SIZE - processCount;
+                    --G;
+                    numHosts = newSize / G;
+                    sizes[0] = G;
+                    displ[0] = 0;
+                    if (processCount > 1) {
+                        for (i = 0; i < numHosts; i++) {
+                            sizes[i] += G * SIZE;
+                            displ[i] = displ[i - 1] + (G + 1) * SIZE;
+                        }
+                        for (++i; i < processCount; i++) {
+                            displ[i] = displ[i - 1] + SIZE;
+                        }
                     }
                 }
+            }
         }
         /* Allocate: we store arrays in row-major order for the ease of scattering */
         N = malloc(sizeof(int) * SIZE * SIZE);
@@ -118,11 +166,14 @@ int main(int argc, char **argv) {
         /* Finalize */
         tEnd = MPI_Wtime();
         tDiff = tEnd - tStart;
-        if (myID == 0)
+        if (myID == 0) {
             printf("Master: Costs %f sec.\n", tDiff);
-        free(M);
+            free(M);
+        }
         free(N);
         free(M_Recv);
+        free(O);
+        free(O_Parts);
         MPI_Finalize();
     } else if (strcmp(argv[1], "Quicksort") == 0) {
 
