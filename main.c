@@ -16,11 +16,13 @@
  * (OSX does not have C11 timing functions we need)
  */
 #ifndef __MACH__
+
 static long get_nanos(void) {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
     return (long) ts.tv_sec * 1000000000L + ts.tv_nsec;
 }
+
 #endif
 
 int main(int argc, char **argv) {
@@ -257,74 +259,57 @@ int main(int argc, char **argv) {
         int processorNameLen;
         MPI_Get_processor_name(myProcessorName, &processorNameLen);
         /* Do work */
-        printf("%d: Allocate.\n", myID);
-        int **M;
-        if (myID == 0)
-            M = malloc(sizeof(int) * 100);
-
-        int **N = malloc(sizeof(int) * 100);
-        int avgSize = 100 / processCount;
-        int eachSizes[processCount];
-        int displacement[processCount];
+        printf("Partition\n");
+        int SIZE = 100;
+        int sizes[processCount];
+        int displ[processCount];
+        int *M, *N;
         {
+            /* Partition */
+            int avg = SIZE / processCount;
             int i;
-            if (myID == 0)
-                for (i = 0; i < 100; i++) {
-                    if (myID == 0)
-                        M[i] = malloc(sizeof(int) * 100);
-
-                    N[i] = malloc(sizeof(int) * 100);
-                    int j;
-                    for (j = 0; j < 100; j++) {
-                        if (myID == 0)
-                            M[i][j] = rand();
-                        N[i][j] = rand();
-                    }
-                }
-            else
-                for (i = 0; i < 100; i++) {
-                    M[i] = malloc(sizeof(int) * 100);
-                }
-        }
-        printf("%d: Partition.\n", myID);
-        /* Partition */
-        {
-            int i;
-            eachSizes[0] = avgSize * 100;
-            displacement[0] = 0;
+            sizes[0] = avg;
+            displ[0] = 0;
             if (processCount > 1)
                 for (i = 1; i < processCount; i++) {
                     if (i != processCount - 1) {
-                        eachSizes[i] = avgSize * 100;
-                        displacement[i] = displacement[i - 1] + avgSize * 100;
+                        sizes[i] = avg * SIZE;
+                        displ[i] = displ[i - 1] + avg * SIZE;
                     } else {
-                        int remaining = 100 - avgSize * i;
-                        eachSizes[i] = remaining * 100;
-                        displacement[i] = displacement[i - 1] + avgSize * 100;
+                        int remainingRows = SIZE - i * avg;
+                        sizes[i] = remainingRows * SIZE;
+                        displ[i] = displ[i - 1] + avg * SIZE;
                     }
-                    printf("Task size for %d/%d: %d. Displ: %d\n", i, processCount, eachSizes[i], displacement[i]);
                 }
         }
-        if (myID != 0) {
-            printf("Allocate M at %d", myID);
-            M = malloc(sizeof(int *) * eachSizes[myID]);
+        printf("Allocate\n");
+        /* Allocate: we store arrays in row-major order for the ease of scattering */
+        N = malloc(sizeof(int) * SIZE * SIZE);
+        if (myID == 0) {
+            M = malloc(sizeof(int) * SIZE * SIZE);
             int i;
-            for (i = 0; i < eachSizes[myID]; i++)
-                M = malloc(sizeof(int) * 100);
+            for (i = 0; i < SIZE * SIZE; i++) {
+                M[i] = rand();
+                printf("M[%d]: %d\n",i,M[i]);
+            }
+        } else
+            M = malloc(sizeof(int) * sizes[myID]);
+        printf("%d: Size: %d, Displacement: %d.\n", myID, sizes[myID], displ[myID]);
+        printf("Send\n");
+        /* Distribute */
+        MPI_Scatterv(&(M[0]), sizes, displ, MPI_INT, &(M[0]), sizes[myID], MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(N[0]), SIZE * SIZE, MPI_INT, 0, MPI_COMM_WORLD);
+        if(myID != 0){
+            int i;
+            for(i = 0; i < sizes[myID];i++)
+                printf("M[%d]:%d\n",i,M[i]);
         }
-        printf("Barrier\n");
-        MPI_Barrier(MPI_COMM_WORLD);
-        printf("%d: Scatter&bcast.\n", myID);
-        /* Scatter & bcast */
-        if (myID == 0)
-            MPI_Scatterv(&(M[0][0]), eachSizes, displacement, MPI_INT, NULL, eachSizes[myID], MPI_INT, 0,
-                         MPI_COMM_WORLD);
-        else
-            MPI_Scatterv(NULL, NULL, NULL, MPI_INT, &(M[0][0]), eachSizes[myID] , MPI_INT, 0, MPI_COMM_WORLD);
-        printf("%d: Bcast.\n", myID);
-        MPI_Bcast(&(N[0][0]), 100 * 100, MPI_INT, 0, MPI_COMM_WORLD);
+        /* Finalize */
         printf("Hi! My ID is %d and my processor name is %s. I'm out of %d processes in total.\n", myID,
                myProcessorName, processCount);
+        free(M);
+        free(N);
+        MPI_Finalize();
     } else {
         printf("No such program as \" %s \".\n", argv[1]);
         MPI_Finalize();
