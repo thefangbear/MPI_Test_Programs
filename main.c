@@ -311,14 +311,14 @@ int main(int argc, char **argv) {
         MPI_Bcast(&(N[0]), SIZE * SIZE, MPI_INT, 0, MPI_COMM_WORLD);
         /* Do work! */
         {
-            int i, k, j;
+            int i, k, j, l=0;
             for (i = 0; i < sizes[myID] / SIZE; i++) /* m */
                 for (k = 0; k < SIZE; k++) /* n */
                     for (j = 0; j < SIZE; j++) /* p , m*n n*p */
                         O_Parts[i * SIZE + j] += M_Recv[i * SIZE + k] * N[k * SIZE + j];
         }
 
-        MPI_Gatherv(O_Parts, sizes[myID] / SIZE, MPI_INT, O,)
+        MPI_Gatherv(&(O_Parts[0]), sizes[myID], MPI_INT, &(O[0]), sizes, displ, MPI_INT, 0, MPI_COMM_WORLD);
         /* Finalize */
         printf("Hi! My ID is %d and my processor name is %s. I'm out of %d processes in total.\n", myID,
                myProcessorName, processCount);
