@@ -82,8 +82,8 @@ int main(int argc, char **argv) {
         MPI_Finalize();
     } else if (strcmp(argv[1], "Matrix") == 0) {
         /* Init */
-        double tStart, tEnd, tDiff;
-        tStart = MPI_Wtime();
+        double tInitStart, tInitEnd, tCompStart, tCompEnd, tInitDiff, tCompDiff;
+        tInitStart = MPI_Wtime();
         int processCount;
         MPI_Comm_size(MPI_COMM_WORLD, &processCount);
         MPI_Request requests[processCount - 1];
@@ -185,6 +185,8 @@ int main(int argc, char **argv) {
                 }
             }
         }
+        tInitEnd = MPI_Wtime();
+        tCompStart = MPI_Wtime();
         /* Allocate: we store arrays in row-major order for the ease of scattering */
         N = malloc(sizeof(int) * SIZE * SIZE);
         if (myID == 0) {
@@ -221,10 +223,11 @@ int main(int argc, char **argv) {
         }
         MPI_Gatherv(&(O_Parts[0]), sizes[myID], MPI_INT, &(O[0]), sizes, displ, MPI_INT, 0, MPI_COMM_WORLD);
         /* Finalize */
-        tEnd = MPI_Wtime();
-        tDiff = tEnd - tStart;
+        tCompEnd = MPI_Wtime();
+        tInitDiff = tInitEnd - tInitStart;
+        tCompDiff = tCompEnd - tCompStart;
         if (myID == 0) {
-            printf("Master: Costs %f sec.\n", tDiff);
+            printf("Master: Init cost: %f sec. Comp cost: %f sec. Total cost: %f sec.\n", tInitDiff, tCompDiff, tInitDiff + tCompDiff);
             free(M);
         }
 
