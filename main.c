@@ -38,7 +38,48 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "Addition") == 0) {
+        printf("Addition\n");
+        /* Init */
+        if (argc < 3) {
+            printf("Err: Incorrect # of args.\n");
+            MPI_Finalize();
+            return 0;
+        }
+        unsigned long total;
 
+        double tStart, tEnd, tDiff;
+        tStart = MPI_Wtime();
+        int processCount;
+        MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+        MPI_Request requests[processCount - 1];
+        int myID;
+        MPI_Comm_rank(MPI_COMM_WORLD, &myID);
+        char myProcessorName[MPI_MAX_PROCESSOR_NAME];
+        int processorNameLen;
+        MPI_Get_processor_name(myProcessorName, &processorNameLen);
+        if (myID == 0) {
+            total = strtoul(argv[2], NULL, 10);
+            printf("Total: %lu", total);
+        }
+        unsigned long results[processCount];
+        MPI_Barrier(MPI_COMM_WORLD);
+        /* Partition */
+        MPI_Bcast(&total, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        /* Do work */
+        unsigned long result;
+        for (result = 0; result < total; result++);
+        MPI_Gather(&result, 1, MPI_UNSIGNED_LONG, &results[0], processCount, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        if (myID == 0) {
+            int i;
+            unsigned long adder = 0;
+            for (i = 0; i < processCount; i++)
+                adder += results[i];
+        }
+        tEnd = MPI_Wtime();
+        tDiff = tEnd - tStart;
+        if (myID == 0)
+            printf("Master: Addition finished in %f sec.\n", tDiff);
+        MPI_Finalize();
     } else if (strcmp(argv[1], "Matrix") == 0) {
         /* Init */
         double tStart, tEnd, tDiff;
@@ -170,10 +211,12 @@ int main(int argc, char **argv) {
             printf("Master: Costs %f sec.\n", tDiff);
             free(M);
         }
+
         free(N);
         free(M_Recv);
         free(O);
         free(O_Parts);
+
         MPI_Finalize();
     } else if (strcmp(argv[1], "Quicksort") == 0) {
 
