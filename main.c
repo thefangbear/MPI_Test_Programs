@@ -260,6 +260,76 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[1], "Mergesort") == 0) {
 
         MPI_Finalize();
+    } else if (strcmp(argv[1], "Sort") == 0) {
+        /* Init */
+        printf("Sort\n");
+        if (argc != 4 || strcmp(argv[3], "--size") != 0) {
+            printf("Err: Num of arguments.\n");
+            MPI_Finalize();
+            return EXIT_FAILURE;
+        }
+        int size = (int) strtol(argv[3], NULL, 10);
+        printf("Size is: %lu\n", size);
+        int processCount;
+        MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+        MPI_Request requests[processCount - 1];
+        int myID;
+        MPI_Comm_rank(MPI_COMM_WORLD, &myID);
+        char myProcessorName[MPI_MAX_PROCESSOR_NAME];
+        int processorNameLen;
+        MPI_Get_processor_name(myProcessorName, &processorNameLen);
+        int *A = NULL, *A_Recv = NULL;
+        if (myID == 0)
+            A = malloc(sizeof(int) * size);
+        /* Partition */
+        int eachSizes[processCount];
+        int displ[processCount];
+        {
+            int i, avg = size / processCount;
+            eachSizes[0] = avg;
+            displ[0] = 0;
+            if (processCount > 1)
+                for (i = 1; i < processCount; i++) {
+                    if (i != processCount - 1) {
+                        eachSizes[i] = avg;
+                        displ[i] = displ[i - 1] + avg;
+                    } else {
+                        int remaining = size - avg * i;
+                        eachSizes[i] = remaining;
+                        displ[i] = displ[i - 1] + avg;
+                    }
+                }
+        }
+        /* Allocate */
+        if (myID == 0) {
+            int i;
+            for (i = 0; i < size; i++)
+                A[i] = rand();
+        }
+        A_Recv = malloc(sizeof(int) * eachSizes[myID]);
+        /* Do work! */
+        MPI_Scatterv(&A, eachSizes, displ, MPI_INT, &A_Recv, eachSizes[myID], MPI_INT, 0, MPI_COMM_WORLD);
+        {
+            int i;
+            for (i = 1; i < eachSizes[myID]; i++) {
+                int j = i;
+                while (A_Recv[j] > A_Recv[j - 1] && j > 0) {
+                    int temp = A_Recv[j - 1];
+                    A_Recv[j - 1] = A_Recv[j];
+                    A_Recv[j] = temp;
+                    j--;
+                }
+            }
+        }
+        MPI_Gatherv(&A_Recv, eachSizes[myID], MPI_INT, &A, eachSizes, displ, MPI_INT, 0, MPI_COMM_WORLD);
+        // TODO merge
+        {
+            int i;
+        }
+        /* Cleanup */
+        if (myID == 0)
+            free(A);
+        MPI_Finalize();
     } else if (strcmp(argv[1], "TSP") == 0) {
 
         MPI_Finalize();

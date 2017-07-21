@@ -7,6 +7,6 @@ else ()
 endif ()
 
 set(CMAKE_C_STANDARD 11)
-
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -O3)
 set(SOURCE_FILES main.c)
 add_executable(MPI_Test_Programs ${SOURCE_FILES})
