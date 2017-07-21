@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
         tInitStart = MPI_Wtime();
         int *M = NULL, *N, *M_Recv, *O_Parts, *O = NULL;
         {
-            /* Partition */
+            /* Not completely fair partition */
             if (G == -1) {
                 int avg = SIZE / processCount;
                 int i;
@@ -146,44 +146,28 @@ int main(int argc, char **argv) {
                         }
                     }
             } else {
+                if (G > SIZE) {
+                    printf("Err: G is too large.\n");
+                    MPI_Finalize();
+                    return EXIT_FAILURE;
+                }
                 int numHosts = SIZE / G;
-                if (numHosts >= processCount) {
-                    int i;
-                    sizes[0] = G * SIZE;
-                    displ[0] = 0;
-                    if (processCount > 1)
-                        for (i = 1; i < processCount; i++) {
-                            if (i != processCount - 1) {
-                                sizes[i] = G * SIZE;
-                                displ[i] = displ[i - 1] + G * SIZE;
-                            } else {
-                                int remaining = SIZE - i * G;
-                                sizes[i] = remaining * SIZE;
-                                displ[i] = displ[i - 1] + G * SIZE;
-                            }
-                        }
-
-                } else {
-                    /* G is big and ... */
-                    /* Distribute one row to each host first to guarantee fairness */
-                    int i;
-                    for (i = 0; i < processCount; i++)
-                        sizes[i] = 1;
-                    /* Then distribute G */
-                    int newSize = SIZE - processCount;
-                    --G;
-                    numHosts = newSize / G;
-                    sizes[0] = G;
-                    displ[0] = 0;
-                    if (processCount > 1) {
-                        for (i = 0; i < numHosts; i++) {
-                            sizes[i] += G * SIZE;
-                            displ[i] = displ[i - 1] + (G + 1) * SIZE;
-                        }
-                        for (++i; i < processCount; i++) {
-                            displ[i] = displ[i - 1] + SIZE;
+                int i;
+                sizes[0] = G;
+                displ[0] = 0;
+                if (numHosts > 1)
+                    for (i = 0; i < numHosts; i++) {
+                        if (i != numHosts - 1) {
+                            sizes[i] = G;
+                            displ[i] = displ[i - 1] + G;
+                        } else {
+                            sizes[i] = SIZE - G * i;
+                            displ[i] = displ[i - 1] + G;
                         }
                     }
+                for (++i; i < processCount; i++) {
+                    sizes[i] = 0;
+                    displ[i] = displ[i - 1];
                 }
             }
         }
