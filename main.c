@@ -11,20 +11,6 @@
 #include <unistd.h>
 #include <memory.h>
 
-/*
- * Timing is only available on non-Mac machines
- * (OSX does not have C11 timing functions we need)
- */
-#ifndef __MACH__
-
-static long get_nanos(void) {
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    return (long) ts.tv_sec * 1000000000L + ts.tv_nsec;
-}
-
-#endif
-
 int main(int argc, char **argv) {
 
     MPI_Init(&argc, &argv);
